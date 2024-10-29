@@ -1,6 +1,8 @@
 
 #include <Windows.h>
 #include <iostream>
+#include <string>
+using namespace std;
 
 BOOL checkDosHeader(BYTE* buffer)
 {
@@ -21,7 +23,7 @@ BOOL getShParameters(BYTE* buffer, DWORD* offset, DWORD* size)
     BOOL ok;
     DWORD nSections;
     DWORD index;
-    DWORD sectionTableAddress;
+    DWORD sectionTableAddress = 0;
     IMAGE_SECTION_HEADER* sectionHeader;
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(buffer + ((IMAGE_DOS_HEADER*)buffer)->e_lfanew);
    
@@ -66,5 +68,16 @@ BOOL getShParameters(BYTE* buffer, DWORD* offset, DWORD* size)
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    std::cout << "Select file to extract payload from:\n";
+    string fileName;
+    getline(cin, fileName);
+
+    HANDLE hFile = CreateFile((LPWSTR)(&fileName), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'" ;
+    DWORD tmp;
+    DWORD fSize = GetFileSize(hFile, 0);
+    BYTE* hInMem = (BYTE*)GlobalAlloc(GMEM_FIXED, fSize);
+    if (!hInMem) cout << "Cannot allocate memory. '\n'";
+    ReadFile(hFile, hInMem, fSize, &tmp, 0);
+    CloseHandle(hFile);
 }
