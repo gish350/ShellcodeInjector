@@ -66,18 +66,48 @@ BOOL getShParameters(BYTE* buffer, DWORD* offset, DWORD* size)
     return FALSE;
 }
 
+DWORD rva2raw(DWORD numOfSections, IMAGE_SECTION_HEADER* FSH, DWORD rva)
+{
+    for (int i = numOfSections - 1; i >= 0; i--)
+        if (FSH[i].VirtualAddress <= rva)
+            return FSH[i].PointerToRawData + rva - FSH[i].VirtualAddress;
+    return 0xFFFFFFFF;
+}
+
 int main()
 {
-    std::cout << "Select file to extract payload from:\n";
-    string fileName;
-    getline(cin, fileName);
+    wstring fileName;
+    cout << "Select file to extract payload from:\n";
+    getline(wcin, fileName);
+    HANDLE hFile = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'";
 
-    HANDLE hFile = CreateFile((LPWSTR)(&fileName), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if (hFile == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'" ;
+    DWORD ddFrom = 0;
+    DWORD ddTo = 0;
+    cout << "address from (hex):\n";
+    cin >> hex >> ddFrom;
+    cout << "address to (hex):\n";
+    cin >> hex >> ddTo;
+  
+
+   
     DWORD tmp;
     DWORD fSize = GetFileSize(hFile, 0);
     BYTE* hInMem = (BYTE*)GlobalAlloc(GMEM_FIXED, fSize);
     if (!hInMem) cout << "Cannot allocate memory. '\n'";
     ReadFile(hFile, hInMem, fSize, &tmp, 0);
     CloseHandle(hFile);
+
+    IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(hInMem + ((IMAGE_DOS_HEADER*)hInMem)->e_lfanew);
+    IMAGE_SECTION_HEADER* sh = (IMAGE_SECTION_HEADER*)(hInMem + ((IMAGE_DOS_HEADER*)hInMem)->e_lfanew + nt->FileHeader.SizeOfOptionalHeader + sizeof(IMAGE_FILE_HEADER) + 4);
+    ddFrom -= nt->OptionalHeader.ImageBase;
+    ddTo -= nt->OptionalHeader.ImageBase;
+
+    int ddFromRaw = rva2raw(nt->FileHeader.NumberOfSections, sh, ddFrom);
+    if (ddFromRaw == 0xFFFFFFFF) ERROR("Invalid range start.");
+    int ddToRaw = ddTo - ddFrom;
+
+    BYTE* temp_test = hInMem + ddFromRaw;
+
+
 }
