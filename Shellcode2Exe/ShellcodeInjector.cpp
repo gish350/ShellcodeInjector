@@ -77,7 +77,7 @@ DWORD rva2raw(DWORD numOfSections, IMAGE_SECTION_HEADER* FSH, DWORD rva)
 int main()
 {
     wstring fileName;
-    cout << "Select file to extract payload from:\n";
+    cout << "Provide path  to PE to extract payload from:\n";
     getline(wcin, fileName);
     HANDLE hFile = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if (hFile == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'";
@@ -88,8 +88,18 @@ int main()
     cin >> hex >> ddFrom;
     cout << "address to (hex):\n";
     cin >> hex >> ddTo;
-  
 
+    cout << "Provide path  to PE to insert payload to:\n";
+
+    HANDLE hFile2 = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile2 == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'";
+
+    DWORD ddFrom2 = 0;
+    DWORD ddTo2 = 0;
+    cout << "address from (hex):\n";
+    cin >> hex >> ddFrom2;
+    cout << "address to (hex):\n";
+    cin >> hex >> ddTo2;
    
     DWORD tmp;
     DWORD fSize = GetFileSize(hFile, 0);
