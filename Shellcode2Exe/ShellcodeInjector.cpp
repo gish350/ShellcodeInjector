@@ -74,36 +74,14 @@ DWORD rva2raw(DWORD numOfSections, IMAGE_SECTION_HEADER* FSH, DWORD rva)
     return 0xFFFFFFFF;
 }
 
-int main()
+DWORD ddFrom2 = 0;
+DWORD ddTo2 = 0;
+
+void getOffset(HANDLE hFile, DWORD ddFrom, DWORD ddTo, BYTE*& hInMem, int& offset)
 {
-    wstring fileName;
-    cout << "Provide path  to PE to extract payload from:\n";
-    getline(wcin, fileName);
-    HANDLE hFile = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if (hFile == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'";
-
-    DWORD ddFrom = 0;
-    DWORD ddTo = 0;
-    cout << "address from (hex):\n";
-    cin >> hex >> ddFrom;
-    cout << "address to (hex):\n";
-    cin >> hex >> ddTo;
-
-    cout << "Provide path  to PE to insert payload to:\n";
-
-    HANDLE hFile2 = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if (hFile2 == INVALID_HANDLE_VALUE) cout << "Cannot open input file. '\n'";
-
-    DWORD ddFrom2 = 0;
-    DWORD ddTo2 = 0;
-    cout << "address from (hex):\n";
-    cin >> hex >> ddFrom2;
-    cout << "address to (hex):\n";
-    cin >> hex >> ddTo2;
-   
     DWORD tmp;
     DWORD fSize = GetFileSize(hFile, 0);
-    BYTE* hInMem = (BYTE*)GlobalAlloc(GMEM_FIXED, fSize);
+    hInMem = (BYTE*)GlobalAlloc(GMEM_FIXED, fSize);
     if (!hInMem) cout << "Cannot allocate memory. '\n'";
     ReadFile(hFile, hInMem, fSize, &tmp, 0);
     CloseHandle(hFile);
@@ -114,10 +92,53 @@ int main()
     ddTo -= nt->OptionalHeader.ImageBase;
 
     int ddFromRaw = rva2raw(nt->FileHeader.NumberOfSections, sh, ddFrom);
-    if (ddFromRaw == 0xFFFFFFFF) ERROR("Invalid range start.");
-    int ddToRaw = ddTo - ddFrom;
+    if (ddFromRaw == 0xFFFFFFFF) cout << "Invalid range start.";
+    
+    
+    offset = ddFromRaw;
 
-    BYTE* temp_test = hInMem + ddFromRaw;
+}
+int main()
+{
+    wstring fileName;
+    cout << "Provide path  to PE to extract payload from:\n";
+    getline(wcin, fileName);
+    HANDLE hFile = CreateFile((fileName.c_str()), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        cout << "Cannot open input file. '\n'";
+        return -1;
+    }
 
+    DWORD ddFrom = 0;
+    DWORD ddTo = 0;
+    cout << "address from (hex):\n";
+    cin >> hex >> ddFrom;
+    cout << "address to (hex):\n";
+    cin >> hex >> ddTo;
 
+    BYTE* hInMem1 = 0;
+    int offset1 = 0;
+    getOffset(hFile, ddFrom, ddTo, hInMem1, offset1);
+
+    cout << "Provide path  to PE to insert payload to:\n";
+
+    HANDLE hFile2 = CreateFile(fileName.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile2 == INVALID_HANDLE_VALUE)
+    {
+        cout << "Cannot open input file. '\n'";
+        return -1;
+    }
+    cout << "address from (hex):\n";
+    cin >> hex >> ddFrom;
+    BYTE* hInMem2 = 0;
+    int offset2 = 0;
+    getOffset(hFile, ddFrom, 0, hInMem2, offset2);
+
+    int size = ddTo - ddFrom;
+    memcpy(hInMem2 + offset2, hInMem1 + offset1, size);
+    fileName = fileName.erase(fileName.length() - 4);
+    fileName = fileName + L"_shellc.exe";
+    hFile = CreateFile(fileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    CloseHandle(hFile);
 }
